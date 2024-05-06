@@ -5,6 +5,8 @@ import MyButton from './src/components/Button.js';
 import axios from 'axios';
 
 const { width, height } = Dimensions.get('window');  // Dimensions of the screen
+const scaleX = width / 640;
+const scaleY = height / 640;
 
 const PaperDetectionScreen = () => {
     const [hasPermission, setHasPermission] = useState(null);
@@ -13,6 +15,7 @@ const PaperDetectionScreen = () => {
     const cameraRef = useRef(null);
     const frameCaptureIntervalRef = useRef(null);
     const [boxes, setBoxes] = useState([]);
+
 
     useEffect(() => {
         (async () => {
@@ -23,7 +26,8 @@ const PaperDetectionScreen = () => {
 
     const sendImageToServer = async (base64Image) => {
         const url = 'http://192.168.100.82:5000/predict';
-        
+        console.log(height)
+        console.log(width)
         axios.post(url, { image: base64Image })
             .then(response => {
                 console.log('Success:', response.data);
@@ -45,7 +49,7 @@ const PaperDetectionScreen = () => {
 
     const startFrameCapture = () => {
         if (!frameCaptureIntervalRef.current) {
-            frameCaptureIntervalRef.current = setInterval(captureFrame, 1000); // Capture frame every 500ms
+            frameCaptureIntervalRef.current = setInterval(captureFrame, 2500); // Capture frame every 500ms
         }
     };
 
@@ -66,10 +70,10 @@ const PaperDetectionScreen = () => {
                 position: 'absolute',
                 borderColor: 'red',
                 borderWidth: 2,
-                left: box[0], // x_min
-                top: box[1], // y_min
-                width: box[2] - box[0], // width
-                height: box[3] - box[1], // height
+                left: box[0] * scaleX, // x_min
+                top: box[1] * scaleY, // y_min
+                width: (box[2] - box[0]) * scaleX, // width
+                height:(box[3] - box[1]) * scaleY, // height
             }} />
         ));
     };
@@ -88,12 +92,11 @@ const PaperDetectionScreen = () => {
                         setIsRecording(true);
                         startFrameCapture();
                     }
-                }} title={isRecording ? "Stop recording" : "Start recording"}/>
+                }} title={isRecording ? "Stop" : "Start"}/>
             </View>
             {currentFrame && (
-                <View>
+                <View style={styles.previewContainer}>
                     <Image source={{ uri: currentFrame }} style={styles.preview} />
-                    {renderBoxes()}  
                 </View>
             )}
         </View>
@@ -104,18 +107,17 @@ const styles = StyleSheet.create({
     container: {
         flex: 1,
         backgroundColor: '#000',
-        justifyContent: 'center',
-        paddingBottom: 20,
-        width: '100%'
+        width: '100%',
+        height:'100%'
     },
     camera: {
         flex: 1,
         borderRadius: 20,
     },
     buttonContainer: {
-        justifyContent: 'center',
-        alignItems: 'center',
-        marginBottom: 20,
+        position: 'absolute',
+        bottom: 50,
+        alignSelf: 'center',
     },
     preview: {
         width: 100,
@@ -124,6 +126,7 @@ const styles = StyleSheet.create({
         bottom: 10,
         right: 10
     }
+    
 });
 
 export default PaperDetectionScreen;

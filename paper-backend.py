@@ -34,6 +34,7 @@ def predict():
     image_data = base64.b64decode(image_data)
     image = Image.open(BytesIO(image_data))
 
+    original_width, original_height = image.size
     # Convert image to RGB and resize
     image = image.convert('RGB')
     image = image.resize((640, 640), Image.LANCZOS)
@@ -45,7 +46,7 @@ def predict():
     input_data = input_data.astype('float32') / 255.0  # Normalize
 
     # Set input tensor
-    interpreter.tensor(input_details[0]['index'], input_data)
+    interpreter.set_tensor(input_details[0]['index'], input_data)
 
     # Run inference
     interpreter.allocate_tensors()
@@ -62,16 +63,27 @@ def predict():
     scaled_confidences = output_data[4, :] 
 
     # Filter out detections with confidence less than 0.3
-    high_conf_indices = np.where(scaled_confidences >= 0.2)[0]
+    high_conf_indices = np.where(scaled_confidences >= 0.84)[0]
     high_conf_boxes = output_data[:, high_conf_indices]
 
     # Extract boxes for NMS
     boxes = np.stack([
-        high_conf_boxes[0, :] - high_conf_boxes[2, :] / 2,  # x_min
-        high_conf_boxes[1, :] - high_conf_boxes[3, :] / 2,  # y_min
-        high_conf_boxes[0, :] + high_conf_boxes[2, :] / 2,  # x_max
-        high_conf_boxes[1, :] + high_conf_boxes[3, :] / 2   # y_max
+        (high_conf_boxes[0, :] - high_conf_boxes[2, :] / 2) , # x_min scaled
+        (high_conf_boxes[1, :] - high_conf_boxes[3, :] / 2), # y_min scaled
+        (high_conf_boxes[0, :] + high_conf_boxes[2, :] / 2) ,  # x_max scaled
+        (high_conf_boxes[1, :] + high_conf_boxes[3, :] / 2) # y_max scaled
     ], axis=-1)
+    """
+    boxes = np.stack([
+    (high_conf_boxes[0, :] - high_conf_boxes[2, :] / 2) * (original_width / 640),  # x_min scaled
+    (high_conf_boxes[1, :] - high_conf_boxes[3, :] / 2) * (original_height / 640), # y_min scaled
+    (high_conf_boxes[0, :] + high_conf_boxes[2, :] / 2) * (original_width / 640),  # x_max scaled
+    (high_conf_boxes[1, :] + high_conf_boxes[3, :] / 2) * (original_height / 640)  # y_max scaled
+    ], axis=-1)
+
+    
+    """
+    
 
     final_scores = scaled_confidences[high_conf_indices]
 
@@ -80,6 +92,7 @@ def predict():
     final_boxes = boxes[nms_indices]
     final_scores = final_scores[nms_indices]
 
+    
     # Package the results
     results = {
         "boxes": final_boxes.tolist(),
