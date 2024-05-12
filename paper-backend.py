@@ -4,8 +4,58 @@ from io import BytesIO
 import base64
 import tensorflow as tf
 import numpy as np
+import cv2
 
 app = Flask(__name__)
+"""
+import serial
+import time
+import serial.tools.list_ports
+ports = serial.tools.list_ports.comports()
+serialInst = serial.Serial()
+port = 'COM5'
+serialInst.port = port
+serialInst.baudrate = 115200
+serialInst.open()
+def send(data):
+    response = ""
+    command = (data)
+    serialInst.write(command.encode('utf-8'))
+    time.sleep(1)
+    while serialInst.in_waiting:
+        try:
+            response = serialInst.readline().decode('utf-8').rstrip()
+            print(response)
+        except UnicodeDecodeError:
+            print("m3lsh")
+
+
+serialInst.close()
+"""
+"""
+import serial
+import timel
+import serial.tools.list_ports
+ports = serial.tools.list_ports.comports()
+serialInst = serial.Serial()
+port = '/dev/cu.usbmodem1101'
+serialInst.port = port
+serialInst.baudrate = 115200
+serialInst.open()
+
+response = ""
+while True:
+    command = input("Enter command to send to Arduino:")
+    serialInst.write(command.encode('utf-8'))
+    time.sleep(1)
+    while serialInst.in_waiting:
+        response = serialInst.readline().decode('utf-8').rstrip()
+        print(response)
+    if command == 'q':
+        break
+
+serialInst.close()
+"""
 
 
 def apply_nms(boxes, scores, max_output_size, iou_threshold):
@@ -23,6 +73,22 @@ interpreter.allocate_tensors()
 input_details = interpreter.get_input_details()
 output_details = interpreter.get_output_details()
 
+#scaleX = width / 640
+#scaleY = height / 640
+
+orig_size = (1920, 888)
+model_size = (640, 640)
+display_size = (390, 844)
+
+orig_width, orig_height = orig_size
+model_width, model_height = model_size
+display_width, display_height = display_size
+
+scale_width_model = model_width / orig_width
+scale_height_model = model_height / orig_height
+
+scale_width_display = display_width / orig_width
+scale_height_display = display_height / orig_height
 
 @app.route('/predict', methods=['POST'])
 def predict():
@@ -63,16 +129,18 @@ def predict():
     scaled_confidences = output_data[4, :] 
 
     # Filter out detections with confidence less than 0.3
-    high_conf_indices = np.where(scaled_confidences >= 0.84)[0]
+    high_conf_indices = np.where(scaled_confidences >= 0.7)[0]
     high_conf_boxes = output_data[:, high_conf_indices]
 
     # Extract boxes for NMS
     boxes = np.stack([
-        (high_conf_boxes[0, :] - high_conf_boxes[2, :] / 2) , # x_min scaled
-        (high_conf_boxes[1, :] - high_conf_boxes[3, :] / 2), # y_min scaled
-        (high_conf_boxes[0, :] + high_conf_boxes[2, :] / 2) ,  # x_max scaled
-        (high_conf_boxes[1, :] + high_conf_boxes[3, :] / 2) # y_max scaled
+        ((high_conf_boxes[0, :] - high_conf_boxes[2, :] / 2)) , # x_min scaled
+        ((high_conf_boxes[1, :] - high_conf_boxes[3, :] / 2)), # y_min scaled
+        ((high_conf_boxes[0, :] + high_conf_boxes[2, :] / 2) )  ,  # x_max scaled
+        ((high_conf_boxes[1, :] + high_conf_boxes[3, :] / 2) ) # y_max scaled
     ], axis=-1)
+    
+    
     """
     boxes = np.stack([
     (high_conf_boxes[0, :] - high_conf_boxes[2, :] / 2) * (original_width / 640),  # x_min scaled
@@ -104,3 +172,4 @@ def predict():
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=5000)
+    serialInst.close()

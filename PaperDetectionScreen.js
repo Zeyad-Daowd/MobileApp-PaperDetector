@@ -15,7 +15,7 @@ const PaperDetectionScreen = () => {
     const cameraRef = useRef(null);
     const frameCaptureIntervalRef = useRef(null);
     const [boxes, setBoxes] = useState([]);
-
+    const [skip,setSkip] = useState(false);
 
     useEffect(() => {
         (async () => {
@@ -23,27 +23,28 @@ const PaperDetectionScreen = () => {
             setHasPermission(status === 'granted');
         })();
     }, []);
-
     const sendImageToServer = async (base64Image) => {
-        const url = 'http://192.168.100.82:5000/predict';
-        console.log(height)
-        console.log(width)
+        const url = 'http://172.20.10.7:5000/predict';
+        setSkip(true);
         axios.post(url, { image: base64Image })
             .then(response => {
                 console.log('Success:', response.data);
                 setBoxes(response.data.boxes);  // Assuming response data.boxes is an array of [x_min, y_min, x_max, y_max]
             })
-            .catch(error => console.error('Error sending image to server:', error));
+            .catch(error => console.error('Error sending image to server:', error)
+            .finally(end => setSkip(false)));
     };
 
     const captureFrame = async () => {
-        if (cameraRef.current) {
-            const photo = await cameraRef.current.takePictureAsync({
-                quality: 0.5,
-                base64: true,
-            });
-            setCurrentFrame(photo.uri); // Update the current frame
-            sendImageToServer(photo.base64);
+        if(!skip) {
+            if (cameraRef.current) {
+                const photo = await cameraRef.current.takePictureAsync({
+                    quality: 0.5,
+                    base64: true,
+                });
+                setCurrentFrame(photo.uri); // Update the current frame
+                sendImageToServer(photo.base64);
+            }[]
         }
     };
 
@@ -70,10 +71,10 @@ const PaperDetectionScreen = () => {
                 position: 'absolute',
                 borderColor: 'red',
                 borderWidth: 2,
-                left: box[0] * scaleX, // x_min
-                top: box[1] * scaleY, // y_min
-                width: (box[2] - box[0]) * scaleX, // width
-                height:(box[3] - box[1]) * scaleY, // height
+                left: box[0], // x_min
+                top: box[1], // y_min
+                width: (box[2] - box[0]) , // width
+                height:(box[3] - box[1]), // height
             }} />
         ));
     };
