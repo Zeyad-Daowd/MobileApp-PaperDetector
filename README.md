@@ -6,5 +6,6 @@
   The front end is written in react-native where you run it using 
   ```bash 
   npx expo start
+  ```
   , scan the qr code and press start to take images.
 </p>
