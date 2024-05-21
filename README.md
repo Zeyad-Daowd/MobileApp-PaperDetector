@@ -9,7 +9,7 @@
   ```bash 
   npx expo start
   ```
-  , scan the qr code and press start to take images.
+  scan the qr code and press start to take images.
 
   ## Backend 
   to run the backend 
